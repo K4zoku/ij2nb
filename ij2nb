@@ -91,8 +91,8 @@ def get_argparser(ArgumentParser=argparse.ArgumentParser):
     return parser
 
 def main(argv):
+    print(__dir__)
     args = get_argparser().parse_args(argv)
-
     srcPath = args.source or input("Enter Source Path: ").strip(" ")
     projectName = getProjectName(srcPath)
     dstPath = os.path.join(args.output or os.path.dirname(srcPath), projectName + args.suffix)
@@ -100,7 +100,7 @@ def main(argv):
 
     copyFolder(os.path.join(srcPath, "src"), os.path.join(dstPath, "src"))  # Copy source code
     dstProj = os.path.join(dstPath, "nbproject")
-    os.makedirs(dstProj)
+    os.makedirs(dstProj, exist_ok=True)
     copyFile(os.path.join(template, "project.properties"), os.path.join(dstProj, "project.properties"))
     project_xml = os.path.join(dstProj, "project.xml")
     copyFile(os.path.join(template, "project.xml"), project_xml)
@@ -111,5 +111,5 @@ def main(argv):
     return 0
 
 if __name__ == "__main__":
-    __dir__ = os.path.dirname(os.path.abspath(__file__))
+    __dir__ = os.path.dirname(os.path.realpath(os.path.abspath(__file__)))
     raise SystemExit(main(sys.argv[1:]))
