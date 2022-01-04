@@ -1,0 +1,115 @@
+#!/usr/bin/env python
+
+# MIT License
+# Devansh Kaloti devansh@dksources.com Contact for support
+# Convert Intellij Projects to Netbeans
+import os
+import sys
+import shutil
+import argparse
+
+def openFile(file, permission):
+    try:
+        return open(file, permission)
+    except FileNotFoundError as e:
+        print("** File Not Found %s**" % file)
+    except PermissionError:
+        print("** Insufficient permissions to open file %s**\n\n" % file)
+    except Exception:
+        print("** Unknown Error While Opening File:  %s**\n\n" % file)
+
+# Coping contents of src folder to final folder
+def copyFolder(src, dist):
+    try:
+        shutil.copytree(src, dist)  # Copy files
+    except FileExistsError:
+        print("Files Existed")
+    except FileNotFoundError:
+        print("Folder could not be located: " + dist)
+    except Exception as e:
+        print("Unknown Error")
+
+# Coping file to dist
+def copyFile(src, dist):
+    try:
+        shutil.copyfile(src, dist)  # Copy file
+    except FileExistsError:
+        print("File Existed")
+    except FileNotFoundError:
+        print("File could not be located")
+    except Exception as e:
+        print("Unknown Error")
+
+# Get the project name, by finding last in pathname
+def getProjectName(path):
+    return str(path).split(os.sep)[-1]
+
+
+# Replace the Project Name In XML file
+def replaceProjectName(project_xml, projectName):
+    with openFile(project_xml, "r") as file:
+        lines = file.readlines()
+
+    for i, line in enumerate(lines):
+        if "<name>******************</name>" in line:
+            lines[i] = "<name>%s</name>\n" % projectName
+
+    with openFile(project_xml, "w") as file:
+        file.write("".join(lines))
+
+
+def get_argparser(ArgumentParser=argparse.ArgumentParser):
+    parser = ArgumentParser(
+        description="Make your Java applications created in IntellIJ easily compatible with NetBeans!"
+    )
+    parser.add_argument(
+        "source",
+        help="path to IntellIJ project",
+        metavar="source path",
+    )
+    parser.add_argument(
+        "-d", "--destination",
+        help="path to destination directory, default is parent directory of source",
+        metavar="path",
+        dest="output",
+        default=None
+    )
+    parser.add_argument(
+        "--template", "-t",
+        help="path to template",
+        metavar="path",
+        dest="template",
+        default=os.path.join(__dir__, "template")
+    )
+    parser.add_argument(
+        "--suffix", "-S",
+        help="add suffix to output project name, default suffix is '_NB'",
+        metavar="suffix",
+        dest="suffix",
+        default="_NB"
+    )
+    return parser
+
+def main(argv):
+    args = get_argparser().parse_args(argv)
+
+    srcPath = args.source or input("Enter Source Path: ").strip(" ")
+    projectName = getProjectName(srcPath)
+    dstPath = os.path.join(args.output or os.path.dirname(srcPath), projectName + args.suffix)
+    template = args.template
+
+    copyFolder(os.path.join(srcPath, "src"), os.path.join(dstPath, "src"))  # Copy source code
+    dstProj = os.path.join(dstPath, "nbproject")
+    os.makedirs(dstProj)
+    copyFile(os.path.join(template, "project.properties"), os.path.join(dstProj, "project.properties"))
+    project_xml = os.path.join(dstProj, "project.xml")
+    copyFile(os.path.join(template, "project.xml"), project_xml)
+    replaceProjectName(project_xml, projectName)
+
+    print("Your project has been converted to %s" % dstPath)
+
+    return 0
+
+if __name__ == "__main__":
+    __dir__ = os.path.dirname(os.path.abspath(__file__))
+    raise SystemExit(main(sys.argv[1:]))
